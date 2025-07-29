@@ -12,3 +12,5 @@ coverage/
 README.md
 tsconfig.json
 vite.config.*
+# Ignore tarballs created by npm pack
+*.tgz

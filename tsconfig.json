@@ -4,7 +4,6 @@
     "module": "ESNext",
     "lib": ["DOM", "ESNext"],
     "declaration": true,
-    "declarationDir": "dist/types",
     "emitDeclarationOnly": false,
     "outDir": "dist",
     "moduleResolution": "Node",

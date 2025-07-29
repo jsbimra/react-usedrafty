@@ -5,3 +5,5 @@ dist/
 coverage/
 *.log
 .DS_Store
+# Ignore tarballs created by npm pack
+*.tgz
