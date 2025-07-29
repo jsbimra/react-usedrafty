@@ -2,14 +2,11 @@
 
 React Drafty (📄 `react-usedrafty`) is a plug-and-play hook for autosaving form state to localStorage or sessionStorage. No setup required. Restore drafts across page reloads — for any form.
 
-# react-usedrafty
-
 ![npm](https://img.shields.io/npm/v/react-usedrafty)
 ![npm downloads](https://img.shields.io/npm/dt/react-usedrafty)
 ![license](https://img.shields.io/npm/l/react-usedrafty)
 ![issues](https://img.shields.io/github/issues/jsbimra/react-usedrafty)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
-
 
 ---
 
@@ -21,6 +18,9 @@ React Drafty (📄 `react-usedrafty`) is a plug-and-play hook for autosaving for
 - ✅ Works with controlled forms (React state)
 - ✅ TypeScript supported
 - ✅ Small, dependency-free
+- ✅ Warn user before leaving with unsaved changes (optional)
+- ✅ Custom debounce/save interval
+- ✅ Clean up/reset support
 
 ---
 
@@ -66,9 +66,11 @@ function ContactForm() {
 
 ```tsx
 useDrafty("draft-key", data, setData, {
-  storage: "session",    // 'local' | 'session'
-  delay: 1000,           // autosave delay (ms)
-  enabled: true,         // toggle saving
+  storage: "session",          // 'local' | 'session'
+  delay: 1500,                 // autosave delay (ms)
+  enabled: true,               // toggle saving
+  warnOnUnload: true,          // optional: show leave warning
+  unloadMessage: "Unsaved changes, are you sure?", // optional custom message
 });
 ```
 
@@ -78,22 +80,34 @@ useDrafty("draft-key", data, setData, {
 
 ### `useDrafty(key, state, setState, options?)`
 
-| Param      | Type        | Description |
-|------------|-------------|-------------|
-| `key`      | `string`    | Storage key |
-| `state`    | `object`    | Your form state |
-| `setState` | `function`  | State setter (e.g. `useState`) |
-| `options`  | `object?`   | Optional config |
+| Param        | Type        | Description |
+|--------------|-------------|-------------|
+| `key`        | `string`    | Storage key |
+| `state`      | `object`    | Your form state |
+| `setState`   | `function`  | State setter (e.g. `useState`) |
+| `options`    | `object?`   | Optional config |
 
 ### Options
 
-- `storage`: `"local"` | `"session"` (default: `"local"`)
-- `delay`: Number of ms between saves (default: 1000ms)
-- `enabled`: Toggle auto-saving (default: `true`)
+- `storage`: `"local"` | `"session"` — Defaults to `"local"`
+- `delay`: Number — Delay between saves (in ms, default: `1000`)
+- `enabled`: Boolean — Toggle auto-saving (default: `true`)
+- `warnOnUnload`: Boolean — Prompt user if leaving with unsaved state
+- `unloadMessage`: String — Custom browser leave warning message
 
 ---
 
-## 🛠 Fixes During Setup
+## ✨ What's New
+
+- `warnOnUnload`: Prevent accidental form exit with optional browser prompt
+- `unloadMessage`: Customize leave warning message
+- Debounce autosave now default (`1000ms`) — can be configured via `delay`
+- Full support for both `localStorage` and `sessionStorage`
+- Reset logic available for manual clearing
+
+---
+
+## 🛠 Troubleshooting
 
 If you face this error:
 
@@ -105,6 +119,19 @@ Install types for React:
 
 ```bash
 npm install --save-dev @types/react
+```
+
+---
+
+## 🧪 Example Directory
+
+A full working example (`/example`) with a contact form is included in the repo.
+Clone the repo and run locally to try it out!
+
+```bash
+cd example
+npm install
+npm start
 ```
 
 ---
