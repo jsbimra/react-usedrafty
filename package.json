@@ -1,0 +1,52 @@
+{
+  "name": "react-usedrafty",
+  "version": "1.0.0",
+  "description": "Auto-save form state using localStorage or sessionStorage in React.",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "react",
+    "hook",
+    "form",
+    "draft",
+    "auto-save",
+    "storage",
+    "localStorage"
+  ],
+  "author": {
+    "name": "jbviaai"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsbimra/react-usedrafty.git"
+  },
+  "homepage": "https://github.com/jsbimra/react-usedrafty#readme",
+  "bugs": {
+    "url": "https://github.com/jsbimra/react-usedrafty/issues"
+  },
+  "peerDependencies": {
+    "react": ">=17.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.28",
+    "@types/react-dom": "^18.0.11",
+    "typescript": "^5.4.0"
+  }
+}
