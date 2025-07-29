@@ -1,0 +1,14 @@
+example/
+node_modules/
+src/
+tests/
+coverage/
+*.log
+*.test.*
+*.spec.*
+.git/
+.gitignore
+.npmignore
+README.md
+tsconfig.json
+vite.config.*

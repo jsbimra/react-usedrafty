@@ -2,6 +2,15 @@
 
 React Drafty (📄 `react-usedrafty`) is a plug-and-play hook for autosaving form state to localStorage or sessionStorage. No setup required. Restore drafts across page reloads — for any form.
 
+# react-usedrafty
+
+![npm](https://img.shields.io/npm/v/react-usedrafty)
+![npm downloads](https://img.shields.io/npm/dt/react-usedrafty)
+![license](https://img.shields.io/npm/l/react-usedrafty)
+![issues](https://img.shields.io/github/issues/jsbimra/react-usedrafty)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+
+
 ---
 
 ## 🔥 Features
