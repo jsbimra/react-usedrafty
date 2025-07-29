@@ -1,6 +1,6 @@
 {
   "name": "react-usedrafty",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Auto-save form state using localStorage or sessionStorage in React.",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
