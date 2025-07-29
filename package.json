@@ -1,6 +1,6 @@
 {
   "name": "react-usedrafty",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "📝 A React hook to auto-save and restore form state using localStorage or sessionStorage.",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
