@@ -45,15 +45,18 @@ function useDrafty(storageKey, currentFormState, updateFormState, options) {
     // Auto-save with debounce
     useEffect(() => {
         if (typeof window === "undefined") return;
-        if (debounce > 0) {
-            if (debounceTimer.current) clearTimeout(debounceTimer.current);
-            debounceTimer.current = setTimeout(() => {
-                saveDraft();
-            }, debounce);
-        } else {
-            saveDraft();
+        if (debounceTimer.current) {
+            clearTimeout(debounceTimer.current);
         }
-    }, [currentFormState]);
+        debounceTimer.current = setTimeout(() => {
+            saveDraft();
+        }, debounce || 300); // if debounce = 0, fallback to small delay
+        return () => {
+            if (debounceTimer.current) {
+                clearTimeout(debounceTimer.current);
+            }
+        };
+    }, [currentFormState, debounce]);
 
     // Warn on browser tab close
     useEffect(() => {
