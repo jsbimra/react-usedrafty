@@ -165,3 +165,4 @@ function useDrafty<T>(
 }
 
 export default useDrafty;
+export { useDrafty };

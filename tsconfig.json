@@ -1,12 +1,9 @@
-{
+{  
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
     "lib": ["DOM", "ESNext"],
     "declaration": true,
-    "emitDeclarationOnly": false,
-    "outDir": "dist",
-    "moduleResolution": "Node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "jsx": "react-jsx",
