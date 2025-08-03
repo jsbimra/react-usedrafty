@@ -7,3 +7,5 @@ coverage/
 .DS_Store
 # Ignore tarballs created by npm pack
 *.tgz
+
+/example

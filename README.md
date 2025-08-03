@@ -1,6 +1,7 @@
 # react-usedrafty
 
-React Drafty (📄 `react-usedrafty`) is a plug-and-play hook for autosaving form state to localStorage or sessionStorage. No setup required. Restore drafts across page reloads — for any form.
+React Drafty (📄 `react-usedrafty`) is a plug-and-play hook for autosaving form state to localStorage or sessionStorage. 
+No setup required. Restore drafts across page reloads — for any form.
 
 ![npm](https://img.shields.io/npm/v/react-usedrafty)
 ![npm downloads](https://img.shields.io/npm/dt/react-usedrafty)
@@ -21,6 +22,8 @@ React Drafty (📄 `react-usedrafty`) is a plug-and-play hook for autosaving for
 - ✅ Warn user before leaving with unsaved changes (optional)
 - ✅ Custom debounce/save interval
 - ✅ Clean up/reset support
+- ✅ `onRestore` callback when draft is loaded
+- ✅ SPA navigation blocking (Next.js & React Router) if router object is provided
 
 ---
 
@@ -66,11 +69,11 @@ function ContactForm() {
 
 ```tsx
 useDrafty("draft-key", data, setData, {
-  storage: "session",          // 'local' | 'session'
-  delay: 1500,                 // autosave delay (ms)
-  enabled: true,               // toggle saving
-  warnOnUnload: true,          // optional: show leave warning
-  unloadMessage: "Unsaved changes, are you sure?", // optional custom message
+  useSession: false,                 // Use sessionStorage instead of localStorage
+  delay: 1500,                        // Autosave delay (ms)
+  warnOnLeave: true,                  // Warn before leaving
+  onRestore: (draft) => console.log("Restored draft:", draft),
+  router: nextRouterInstance,         // Optional: pass Next.js or React Router instance
 });
 ```
 
@@ -89,21 +92,21 @@ useDrafty("draft-key", data, setData, {
 
 ### Options
 
-- `storage`: `"local"` | `"session"` — Defaults to `"local"`
-- `delay`: Number — Delay between saves (in ms, default: `1000`)
-- `enabled`: Boolean — Toggle auto-saving (default: `true`)
-- `warnOnUnload`: Boolean — Prompt user if leaving with unsaved state
-- `unloadMessage`: String — Custom browser leave warning message
+- `useSession`: Boolean — Use `sessionStorage` instead of `localStorage` (default: false)
+- `delay`: Number — Delay between saves in ms (default: `1000`)
+- `warnOnLeave`: Boolean/String/Function — Warn user before leaving (default: false)
+- `onRestore`: Function — Callback with restored draft
+- `router`: Object — Optional Next.js or React Router instance to block SPA navigation
 
 ---
 
 ## ✨ What's New
 
-- `warnOnUnload`: Prevent accidental form exit with optional browser prompt
-- `unloadMessage`: Customize leave warning message
-- Debounce autosave now default (`1000ms`) — can be configured via `delay`
-- Full support for both `localStorage` and `sessionStorage`
-- Reset logic available for manual clearing
+- Added `onRestore` callback to run logic when draft is restored
+- Added `router` option for SPA navigation blocking in Next.js and React Router
+- Improved `warnOnLeave` to accept custom message or condition function
+- Debounce improvements for smoother autosave
+- Works with both localStorage and sessionStorage
 
 ---
 
