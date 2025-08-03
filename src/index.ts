@@ -10,20 +10,11 @@ export interface UseDraftyOptions<T> {
 
 export interface UseDraftyReturn {
   saveDraft: () => void;
-  clearDraft: () => void;
+  clearDraft: (opts?: { submitted?: boolean }) => void;
   hasDraft: boolean;
   isDirty: boolean;
 }
 
-/**
- * useDrafty
- * Save and restore form drafts with optional navigation blocking.
- *
- * @param storageKey - Unique key for saving form data
- * @param currentFormState - Current form state object
- * @param updateFormState - Setter function to update form state
- * @param options - Optional config
- */
 function useDrafty<T extends Record<string, any>>(
   storageKey: string,
   currentFormState: T,
@@ -32,150 +23,123 @@ function useDrafty<T extends Record<string, any>>(
 ): UseDraftyReturn {
   const {
     useSession = false,
-    debounce = 0,
+    debounce = 300,
     warnOnLeave = false,
     onRestore,
     router,
   } = options || {};
 
   const storage: Storage = useSession ? sessionStorage : localStorage;
+  const submittedFlagKey = `submitted:${storageKey}`;
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isRestored = useRef(false);
 
   const [hasDraft, setHasDraft] = useState(false);
   const [initialDraft, setInitialDraft] = useState<T | null>(null);
 
-  // Restore saved draft
+  /** Restore saved draft unless marked submitted */
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     try {
+      const wasSubmitted = storage.getItem(submittedFlagKey) === "true";
+      if (wasSubmitted) {
+        console.info(`[useDrafty] Skipping restore for "${storageKey}" (submitted)`);
+        return;
+      }
+
       const saved = storage.getItem(storageKey);
       if (saved) {
         const parsed: T = JSON.parse(saved);
         updateFormState(parsed);
         setInitialDraft(parsed);
         setHasDraft(true);
-        if (onRestore) onRestore(parsed);
-        console.info(`[useDrafty] Draft restored for key "${storageKey}"`);
+        onRestore?.(parsed);
+        console.info(`[useDrafty] Draft restored for "${storageKey}"`);
       }
     } catch (e) {
       console.warn("[useDrafty] Failed to load saved draft:", e);
+    } finally {
+      isRestored.current = true;
     }
   }, [storageKey]);
 
-  // Auto-save with debounce
+  /** Auto-save with debounce after restore */
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
+    if (!isRestored.current) return;
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
       saveDraft();
-    }, debounce || 300); // fallback to small delay
-
-    console.log("debounceTime Fix Update!");
+    }, debounce);
 
     return () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
   }, [currentFormState, debounce]);
 
-  // Warn on browser tab close
+  /** Warn on browser/tab close */
   useEffect(() => {
-    if (typeof window === "undefined") return;
     if (!warnOnLeave) return;
-
     const getMessage = () => {
-      const res =
-        typeof warnOnLeave === "function" ? warnOnLeave() : warnOnLeave;
+      const res = typeof warnOnLeave === "function" ? warnOnLeave() : warnOnLeave;
       return typeof res === "string" ? res : "You have unsaved changes.";
     };
-
     const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
       const message = getMessage();
       e.preventDefault();
       e.returnValue = message;
       return message;
     };
-
     window.addEventListener("beforeunload", beforeUnloadHandler);
-    return () => {
-      window.removeEventListener("beforeunload", beforeUnloadHandler);
-    };
+    return () => window.removeEventListener("beforeunload", beforeUnloadHandler);
   }, [warnOnLeave]);
 
-  // Warn on SPA route change if router is provided
+  /** Auto-clear on SPA navigation if router provided */
   useEffect(() => {
-    if (!warnOnLeave) return;
-    if (!router) {
-      console.info(
-        "[useDrafty] No router object provided. SPA navigation warnings will be skipped."
-      );
-      return;
-    }
-
-    const getMessage = () => {
-      const res =
-        typeof warnOnLeave === "function" ? warnOnLeave() : warnOnLeave;
-      return typeof res === "string" ? res : "You have unsaved changes.";
+    if (!router) return;
+    const clearOnNavigation = () => {
+      clearDraft();
+      console.info(`[useDrafty] Draft cleared for "${storageKey}" on navigation`);
     };
 
-    let cleanup: (() => void) | undefined;
-
-    // Next.js Pages Router style
-    if (router.onRouteChangeStart && router.offRouteChangeStart) {
-      const handler = () => {
-        if (!confirm(getMessage())) {
-          throw "Navigation cancelled by user";
-        }
-      };
-      router.onRouteChangeStart(handler);
-      cleanup = () => router.offRouteChangeStart(handler);
-      console.info("[useDrafty] SPA navigation blocking active (Next.js Pages Router).");
+    // Next.js Pages Router
+    if (router.events?.on) {
+      router.events.on("routeChangeStart", clearOnNavigation);
+      return () => router.events.off("routeChangeStart", clearOnNavigation);
     }
 
-    // React Router style
-    else if (router.block) {
-      cleanup = router.block(getMessage());
-      console.info("[useDrafty] SPA navigation blocking active (React Router).");
+    // React Router
+    if (router.block) {
+      const unblock = router.block(() => {
+        clearOnNavigation();
+        return true;
+      });
+      return unblock;
     }
+  }, [router]);
 
-    // Next.js App Router (13+)
-    else if (router.prefetch && router.push) {
-      console.warn(
-        "[useDrafty] Detected Next.js App Router. Use 'router.beforePopState' for blocking."
-      );
-    }
-
-    // Unknown router
-    else {
-      console.warn(
-        "[useDrafty] Router provided but unsupported methods found. SPA blocking skipped."
-      );
-    }
-
-    return () => {
-      if (typeof cleanup === "function") cleanup();
-    };
-  }, [warnOnLeave, router]);
-
-  // Save draft
+  /** Save draft */
   const saveDraft = () => {
-    if (typeof window === "undefined") return;
     try {
       storage.setItem(storageKey, JSON.stringify(currentFormState));
       setHasDraft(true);
+      storage.removeItem(submittedFlagKey); // If editing again, remove submit flag
     } catch (e) {
       console.warn("[useDrafty] Failed to save draft:", e);
     }
   };
 
-  // Clear draft
-  const clearDraft = () => {
-    if (typeof window === "undefined") return;
+  /** Clear draft (optionally mark submitted) */
+  const clearDraft = (opts?: { submitted?: boolean }) => {
     try {
       storage.removeItem(storageKey);
+      if (opts?.submitted) {
+        storage.setItem(submittedFlagKey, "true");
+      } else {
+        storage.removeItem(submittedFlagKey);
+      }
       setHasDraft(false);
       setInitialDraft(null);
     } catch (e) {
@@ -183,9 +147,8 @@ function useDrafty<T extends Record<string, any>>(
     }
   };
 
-  // Dirty check
-  const isDirty =
-    JSON.stringify(initialDraft) !== JSON.stringify(currentFormState);
+  /** Dirty check */
+  const isDirty = JSON.stringify(initialDraft) !== JSON.stringify(currentFormState);
 
   return { saveDraft, clearDraft, hasDraft, isDirty };
 }

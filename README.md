@@ -45,6 +45,7 @@ yarn add react-usedrafty
 import { useDrafty } from "react-usedrafty";
 import { useState } from "react";
 
+Variation 1 (Basic)
 function ContactForm() {
   const [formData, setFormData] = useState({ name: "", message: "" });
 
@@ -60,6 +61,31 @@ function ContactForm() {
         value={formData.message}
         onChange={(e) => setFormData({ ...formData, message: e.target.value })}
       />
+    </form>
+  );
+}
+
+Variation 2 (Advance)
+import { useDrafty } from "react-usedrafty";
+
+function MyForm({ router }) {
+  const [formState, setFormState] = useState({ name: "", email: "" });
+
+  const { saveDraft, clearDraft, hasDraft, isDirty } = useDrafty(
+    "myForm",
+    formState,
+    setFormState,
+    { debounce: 500, warnOnLeave: true, router }
+  );
+
+  const handleSubmit = () => {
+    // Send to API...
+    clearDraft({ submitted: true }); // ✅ clears and prevents restoring stale data
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* form fields */}
     </form>
   );
 }
@@ -93,10 +119,18 @@ useDrafty("draft-key", data, setData, {
 ### Options
 
 - `useSession`: Boolean — Use `sessionStorage` instead of `localStorage` (default: false)
-- `delay`: Number — Delay between saves in ms (default: `1000`)
-- `warnOnLeave`: Boolean/String/Function — Warn user before leaving (default: false)
-- `onRestore`: Function — Callback with restored draft
+- `debounce`: Number — Debounce time in ms for saving drafts (defaults to 300ms if not provided; setting 0 still uses 300ms to avoid instant saves).
+- `warnOnLeave`: Boolean/String/Function — Warn user before leaving with unsaved changes. (default: false)
+- `onRestore`: Function — void – Callback when a draft is restored.
 - `router`: Object — Optional Next.js or React Router instance to block SPA navigation
+
+### Returns
+| Method | Type | Description |
+|--------|------|-------------|
+| `saveDraft()` | `() => void` | Saves current form state immediately. |
+| `clearDraft(options?: { submitted?: boolean })` | `() => void` | Clears the saved draft. If `submitted: true` is passed, sets a flag so the draft will not be restored next time the form is opened. |
+| `hasDraft` | `boolean` | Whether a saved draft exists. |
+| `isDirty` | `boolean` | Whether the current form state differs from the initially restored draft. |
 
 ---
 
@@ -136,6 +170,16 @@ cd example
 npm install
 npm start
 ```
+
+## Changelog
+
+### v2.1.0
+**Enhancements**
+- **Improved debounce behavior** — Draft is only saved after the user stops typing for the specified debounce period. No more instant save on first keystroke.
+- **Form submission awareness** — New `clearDraft({ submitted: true })` option clears the draft and prevents restoring stale data when the form is reopened.
+- **Skip restore if submitted** — If the form was submitted previously, old drafts are skipped to avoid overwriting updated backend data.
+- **Auto-clear on SPA navigation** — If a router is passed (Next.js Pages Router or React Router), drafts are cleared when navigating away.
+- **State reset after submission** — If the user edits the form again after submission, the submitted flag is removed and drafts are saved again.
 
 ---
 

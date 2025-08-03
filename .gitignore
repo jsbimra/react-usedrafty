@@ -9,3 +9,5 @@ coverage/
 *.tgz
 
 /example
+
+Local_README.md

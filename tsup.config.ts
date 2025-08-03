@@ -8,7 +8,7 @@ export default defineConfig({
   clean: true,                   // Clean dist before build
   target: "es2018",              // Good compatibility baseline
   splitting: false,              // Not needed for small lib
-  minify: false,                // Easier to debug (optional)
+  minify: true,                // Easier to debug (optional)
   esbuildOptions(options) {
     options.drop = []; // don't drop 'console' or 'debugger'
     // options.treeShaking = false; // disable dead-code removal
