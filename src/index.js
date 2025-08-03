@@ -51,6 +51,9 @@ function useDrafty(storageKey, currentFormState, updateFormState, options) {
         debounceTimer.current = setTimeout(() => {
             saveDraft();
         }, debounce || 300); // if debounce = 0, fallback to small delay
+
+        console.log("debounceTime Fix Update!");
+
         return () => {
             if (debounceTimer.current) {
                 clearTimeout(debounceTimer.current);

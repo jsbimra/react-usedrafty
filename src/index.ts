@@ -1,122 +1,102 @@
 import { useEffect, useRef, useState } from "react";
 
-/**
- * 🧠 useDrafty Hook
- *
- * Purpose:
- * - Automatically saves user-filled form data (draft) in the browser
- * - Warns users before leaving if they’ve made changes
- * - Allows restoring form state when user returns (like Gmail drafts)
- *
- * Why it's useful:
- * - Prevents user frustration from accidental tab closures or reloads
- * - Makes long or multi-step forms more forgiving
- * - Improves UX with minimal developer setup
- *
- * Why it's unique:
- * - Framework-agnostic design for React
- * - Works with either localStorage or sessionStorage
- * - Includes smart “isDirty” tracking
- * - Zero dependencies, plug-and-play
- * - Built with indie creators and teams in mind
- *
- * Author's goal:
- * - To make form-saving as easy as typing a few lines
- * - To encourage safer data collection in modern UIs
- * - To open-source it for use in multiple real-world projects and products
- */
-
-export type UseDraftyOptions<T> = {
+export interface UseDraftyOptions<T> {
   useSession?: boolean; // Use sessionStorage instead of localStorage
-  debounce?: number; // Debounce duration for saving, in ms (e.g. 500)
-  warnOnLeave?: boolean | string | (() => boolean | string); // Message or condition before leaving
-  onRestore?: (restoredDraft: T) => void; // Optional callback when restoring a draft
-};
+  debounce?: number; // Debounce time in ms
+  warnOnLeave?: boolean | (() => string | boolean); // Warning message or function
+  onRestore?: (draft: T) => void; // Callback when draft is restored
+  router?: any; // Router object (Next.js, React Router, etc.)
+}
 
-export type UseDraftyResult<T> = {
+export interface UseDraftyReturn {
   saveDraft: () => void;
   clearDraft: () => void;
   hasDraft: boolean;
   isDirty: boolean;
-};
+}
 
 /**
- * 🪄 useDrafty Hook Implementation
+ * useDrafty
+ * Save and restore form drafts with optional navigation blocking.
+ *
+ * @param storageKey - Unique key for saving form data
+ * @param currentFormState - Current form state object
+ * @param updateFormState - Setter function to update form state
+ * @param options - Optional config
  */
-function useDrafty<T>(
+function useDrafty<T extends Record<string, any>>(
   storageKey: string,
   currentFormState: T,
-  updateFormState: (data: T) => void,
+  updateFormState: (state: T) => void,
   options?: UseDraftyOptions<T>
-): UseDraftyResult<T> {
+): UseDraftyReturn {
   const {
     useSession = false,
     debounce = 0,
     warnOnLeave = false,
     onRestore,
+    router,
   } = options || {};
 
-  const storage = useSession ? sessionStorage : localStorage;
+  const storage: Storage = useSession ? sessionStorage : localStorage;
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [hasDraft, setHasDraft] = useState(false);
   const [initialDraft, setInitialDraft] = useState<T | null>(null);
 
-  /**
-   * Load draft from storage (if exists) and restore it into form state
-   */
+  // Restore saved draft
   useEffect(() => {
+    if (typeof window === "undefined") return;
     try {
       const saved = storage.getItem(storageKey);
       if (saved) {
-        const parsedDraft: T = JSON.parse(saved);
-        updateFormState(parsedDraft);
-        setInitialDraft(parsedDraft);
+        const parsed: T = JSON.parse(saved);
+        updateFormState(parsed);
+        setInitialDraft(parsed);
         setHasDraft(true);
-        if (onRestore) onRestore(parsedDraft);
+        if (onRestore) onRestore(parsed);
+        console.info(`[useDrafty] Draft restored for key "${storageKey}"`);
       }
     } catch (e) {
-      console.warn("[useDrafty] Unable to load saved draft:", e);
+      console.warn("[useDrafty] Failed to load saved draft:", e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
-  /**
-   * Save draft to storage whenever form data changes
-   */
+  // Auto-save with debounce
   useEffect(() => {
-    if (debounce > 0) {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(() => {
-        saveDraft();
-      }, debounce);
-    } else {
-      saveDraft();
+    if (typeof window === "undefined") return;
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
     }
+    debounceTimer.current = setTimeout(() => {
+      saveDraft();
+    }, debounce || 300); // fallback to small delay
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFormState]);
+    console.log("debounceTime Fix Update!");
 
-  /**
-   * Warn users before leaving the page if form is dirty
-   */
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [currentFormState, debounce]);
+
+  // Warn on browser tab close
   useEffect(() => {
+    if (typeof window === "undefined") return;
     if (!warnOnLeave) return;
 
-    const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
-      const shouldWarn =
-        typeof warnOnLeave === "function"
-          ? warnOnLeave()
-          : warnOnLeave;
+    const getMessage = () => {
+      const res =
+        typeof warnOnLeave === "function" ? warnOnLeave() : warnOnLeave;
+      return typeof res === "string" ? res : "You have unsaved changes.";
+    };
 
-      if (shouldWarn) {
-        const message = typeof shouldWarn === "string"
-          ? shouldWarn
-          : "You have unsaved changes. Are you sure you want to leave?";
-        e.preventDefault();
-        e.returnValue = message;
-        return message;
-      }
+    const beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+      const message = getMessage();
+      e.preventDefault();
+      e.returnValue = message;
+      return message;
     };
 
     window.addEventListener("beforeunload", beforeUnloadHandler);
@@ -125,43 +105,89 @@ function useDrafty<T>(
     };
   }, [warnOnLeave]);
 
-  /**
-   * Save current form data as draft
-   */
+  // Warn on SPA route change if router is provided
+  useEffect(() => {
+    if (!warnOnLeave) return;
+    if (!router) {
+      console.info(
+        "[useDrafty] No router object provided. SPA navigation warnings will be skipped."
+      );
+      return;
+    }
+
+    const getMessage = () => {
+      const res =
+        typeof warnOnLeave === "function" ? warnOnLeave() : warnOnLeave;
+      return typeof res === "string" ? res : "You have unsaved changes.";
+    };
+
+    let cleanup: (() => void) | undefined;
+
+    // Next.js Pages Router style
+    if (router.onRouteChangeStart && router.offRouteChangeStart) {
+      const handler = () => {
+        if (!confirm(getMessage())) {
+          throw "Navigation cancelled by user";
+        }
+      };
+      router.onRouteChangeStart(handler);
+      cleanup = () => router.offRouteChangeStart(handler);
+      console.info("[useDrafty] SPA navigation blocking active (Next.js Pages Router).");
+    }
+
+    // React Router style
+    else if (router.block) {
+      cleanup = router.block(getMessage());
+      console.info("[useDrafty] SPA navigation blocking active (React Router).");
+    }
+
+    // Next.js App Router (13+)
+    else if (router.prefetch && router.push) {
+      console.warn(
+        "[useDrafty] Detected Next.js App Router. Use 'router.beforePopState' for blocking."
+      );
+    }
+
+    // Unknown router
+    else {
+      console.warn(
+        "[useDrafty] Router provided but unsupported methods found. SPA blocking skipped."
+      );
+    }
+
+    return () => {
+      if (typeof cleanup === "function") cleanup();
+    };
+  }, [warnOnLeave, router]);
+
+  // Save draft
   const saveDraft = () => {
+    if (typeof window === "undefined") return;
     try {
-      const serialized = JSON.stringify(currentFormState);
-      storage.setItem(storageKey, serialized);
+      storage.setItem(storageKey, JSON.stringify(currentFormState));
       setHasDraft(true);
     } catch (e) {
-      console.warn("[useDrafty] Failed to save form draft:", e);
+      console.warn("[useDrafty] Failed to save draft:", e);
     }
   };
 
-  /**
-   * Clear saved draft from storage
-   */
+  // Clear draft
   const clearDraft = () => {
+    if (typeof window === "undefined") return;
     try {
       storage.removeItem(storageKey);
       setHasDraft(false);
       setInitialDraft(null);
     } catch (e) {
-      console.warn("[useDrafty] Failed to clear form draft:", e);
+      console.warn("[useDrafty] Failed to clear draft:", e);
     }
   };
 
-  /**
-   * Check if form is dirty (i.e. modified since draft was loaded)
-   */
-  const isDirty = JSON.stringify(initialDraft) !== JSON.stringify(currentFormState);
+  // Dirty check
+  const isDirty =
+    JSON.stringify(initialDraft) !== JSON.stringify(currentFormState);
 
-  return {
-    saveDraft,
-    clearDraft,
-    hasDraft,
-    isDirty,
-  };
+  return { saveDraft, clearDraft, hasDraft, isDirty };
 }
 
 export default useDrafty;
